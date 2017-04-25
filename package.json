@@ -1,5 +1,5 @@
 {
-  "name": "socauto",
+  "name": "whatyoumissed-api",
   "version": "0.0.0",
   "private": true,
   "scripts": {
@@ -8,13 +8,19 @@
     "serve": "node ./bin/www"
   },
   "dependencies": {
+    "bluebird": "^3.4.7",
     "body-parser": "~1.15.2",
     "cookie-parser": "~1.4.3",
+    "cookie-session": "^2.0.0-alpha.2",
     "debug": "~2.2.0",
     "dotenv": "^4.0.0",
+    "dynamodb-localhost": "0.0.5",
+    "dynamoose": "^0.7.0",
     "express": "~4.14.0",
     "fb": "^1.1.1",
     "morgan": "~1.7.0",
+    "ramda": "^0.23.0",
+    "rxjs": "^5.3.0",
     "serve-favicon": "^2.3.2"
   },
   "devDependencies": {

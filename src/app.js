@@ -1,19 +1,41 @@
-import express      from 'express';
-import path         from 'path';
-import logger       from 'morgan';
-import cookieParser from 'cookie-parser';
-import bodyParser   from 'body-parser';
-import favicon      from 'serve-favicon';
-import routes       from './routes/index';
+import express       from 'express';
+import path          from 'path';
+import logger        from 'morgan';
+import cookieSession from 'cookie-session';
+import cookieParser  from 'cookie-parser';
+import bodyParser    from 'body-parser';
+import favicon       from 'serve-favicon';
+
+
+import users         from './routes/users';
+import facebook      from './routes/facebook';
+import accounts      from './routes/accounts';
+
+import { dynamoose, dynamodb } from './config/dynamodb';
+
+import User          from './models/user';
 
 let app = express();
+
+
+
+
+// dynamodb.deleteTable({ TableName: "User" }, console.log);
+// dynamodb.listTables(console.log);
+
+
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cookieSession({ secret: 'secret'}));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, '/../public')));
 
-app.use('/', routes);
+app.use('/facebook', facebook);
+app.use('/users',    users);
+app.use('/users/:userId/accounts', accounts);
+
+
 app.use(favicon(__dirname + '/../public/images/favicon.ico'));
 // using arrow syntax
 app.use((req, res, next) => {
@@ -22,7 +44,7 @@ app.use((req, res, next) => {
   next(err);
 });
 
-if (app.get('env') === 'development') {
+if (process.env.NODE_ENV === 'development') {
   app.use((err, req, res, next) => {
     res.status(err.status || 500);
     res.render('error', {

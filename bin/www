@@ -14,7 +14,7 @@ try {
  */
 
 var app = process.env.NODE_ENV == 'development' ? require('../src/app') : require('../build/app');
-var debug = require('debug')('socauto:server');
+var debug = require('debug')('whatyoumissed-api:server');
 var http = require('http');
 
 /**
