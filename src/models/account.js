@@ -34,6 +34,10 @@ const schema = new dynamoose.Schema({
     type: String,
     trim: true,
     required: true
+  },
+  assignments: {
+    type: [Object],
+    default: []
   }
 },
 {
@@ -49,6 +53,11 @@ schema.statics.create$ = function(userId, options) {
 schema.statics.get$ = function({type, userId, accountId}) {
   let Account = dynamoose.model('Account');
   return Rx.Observable.bindNodeCallback(Account.get.bind(Account))({type, userId, accountId});
+}
+
+schema.statics.update$ = function(query, operation) {
+  let Account = dynamoose.model('Account');
+  return Rx.Observable.bindNodeCallback(Account.update.bind(Account))(query, operation);
 }
 
 

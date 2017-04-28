@@ -54,6 +54,22 @@ router.get('/:accountId', (req, res, next) => {
   )
 });
 
+router.post('/:accountId/assignment', (req, res, next) => {
+  let getAccount$ = Account.get$({type: 'facebook', userId: req.params.userId, accountId: req.params.accountId});
+  let updateAccount$ = R.curry(Account.update$)({type: 'facebook', userId: req.params.userId, accountId: req.params.accountId});
+
+  Rx.Observable.of(req.body.assignment)
+  .do(console.log)
+  .flatMap((assignment) => getAccount$.flatMap( account => Rx.Observable.of({account, assignments: R.union(R.propOr([], 'assignments')(account), R.of(assignment)) })) )
+  .do(console.log)
+  .switchMap(({account, assignments}) => updateAccount$({assignments}) )
+  .do(console.log)
+  .subscribe(
+    data => res.json(data),
+    err => res.status(500).json(err)
+  )
+});
+
 router.get('/:accountId/facebook/pages', (req, res, next) => {
   let curriedSearch$ = R.curry(fbPageSearch$)(req.query.query);
 
