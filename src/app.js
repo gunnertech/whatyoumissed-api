@@ -11,17 +11,33 @@ import users         from './routes/users';
 import facebook      from './routes/facebook';
 import accounts      from './routes/accounts';
 
-import { dynamoose, dynamodb } from './config/dynamodb';
-
-import User          from './models/user';
 
 let app = express();
 
 
 
+// import { dynamoose, dynamodb } from './config/dynamodb';
 
 // dynamodb.deleteTable({ TableName: "User" }, console.log);
 // dynamodb.listTables(console.log);
+
+// import Dog          from './models/dog';
+
+// Dog.create({
+//   ownerId: 4,
+//   name: 'Odie',
+//   breed: 'Beagle',
+//   color: ['Tan'],
+//   cartoon: true
+// }, function(err, odie) {
+//   if(err) { return console.log(err); }
+//   console.log('Odie is a ' + odie.breed);
+// });
+
+// Dog.get({ownerId: 4, name: 'Odie'}, function(err, odie) {
+//   if(err) { return console.log(err); }
+//   console.log('Odie is a ' + odie.breed);
+// });
 
 
 app.use(logger('dev'));

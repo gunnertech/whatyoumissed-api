@@ -1,4 +1,4 @@
-import dynamoose    from 'dynamoose';
+import { dynamoose, dnynamodb } from '../config/dynamodb';
 import Rx           from 'rxjs/Rx';
 
 const schema = new dynamoose.Schema({ 
@@ -9,18 +9,26 @@ const schema = new dynamoose.Schema({
   accountId: {
     type: Number,
     required: true,
-    rangeKey: true
-  },
-  name: {
-    type: String,
-    required: true
+    rangeKey: true,
+    index: true
   },
   type: {
     type: String,
     trim: true,
     lowercase: true,
     required: true,
-    default: 'facebook'
+    default: 'facebook',
+    rangeKey: true,
+    index: true
+  },
+  name: {
+    type: String,
+    required: true
+  },
+  autopilot: {
+    type: Boolean,
+    required: true,
+    default: false
   },
   accessToken: {
     type: String,
@@ -35,8 +43,12 @@ const schema = new dynamoose.Schema({
 
 schema.statics.create$ = function(userId, options) {
   let Account = dynamoose.model('Account');
-
   return Rx.Observable.bindNodeCallback(Account.create.bind(Account))(Object.assign({}, options, {userId: userId}));
+}
+
+schema.statics.get$ = function({type, userId, accountId}) {
+  let Account = dynamoose.model('Account');
+  return Rx.Observable.bindNodeCallback(Account.get.bind(Account))({type, userId, accountId});
 }
 
 

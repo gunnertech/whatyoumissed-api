@@ -3,8 +3,9 @@ import Rx      from 'rxjs/Rx';
 import R       from 'ramda';
 
 import Account from '../models/account';
+import User from '../models/user';
 import {FB, FacebookApiException} from 'fb';
-import {fbOauth$, fbMe$} from '../utils/facebook';
+import {fbOauth$, fbMe$, fbPageSearch$, fbPostSearch$} from '../utils/facebook';
 
 
 let router = express.Router({mergeParams: true});
@@ -44,5 +45,63 @@ router.get('/facebook_connect', (req, res, next) => {
     )
 
 });
+
+router.get('/:accountId', (req, res, next) => {
+  Account.get$({type: 'facebook', userId: parseInt(req.params.userId), accountId: parseInt(req.params.accountId)})
+  .subscribe(
+    account => res.json(account),
+    err => res.status(500).json(err)
+  )
+});
+
+router.get('/:accountId/facebook/pages', (req, res, next) => {
+  let curriedSearch$ = R.curry(fbPageSearch$)(req.query.query);
+
+  Account.get$({type: 'facebook', userId: req.params.userId, accountId: req.params.accountId})
+  .pluck('accessToken')
+  .switchMap(curriedSearch$)
+  .subscribe(
+    fbData => res.json(fbData),
+    err => res.status(500).json(err)
+  )
+});
+
+router.get('/:accountId/facebook/:facebookId/posts', (req, res, next) => {
+  let fbPostSearchWithFacebookId$ = R.curry(fbPostSearch$)(req.params.facebookId);
+  let filterOnSelectedTypes = R.ifElse(
+    R.either(R.isEmpty, R.isNil),
+    (types) => R.identity,
+    (types) => R.curry(R.filter(R.pipe(R.prop('type'), R.curry(R.flip(R.contains))(types))))
+  )((req.query.types ? req.query.types.split(',') : null));
+
+  let containsAccountId = R.curry(R.contains)(req.params.accountId);
+
+  let filterOnLiked = R.ifElse(
+    R.equals('liked'),
+    () => R.filter(R.pipe(R.path(['likes','data']), R.pluck('id'), containsAccountId, R.not)),
+    () => R.identity
+  )(req.query.engagement);
+
+  let filterOnCommented = R.ifElse(
+    R.equals('commented'),
+    () => R.filter(R.pipe(R.pathOr([],['comments','data']), R.pluck('from'), R.pluck('id'), containsAccountId, R.not)),
+    () => R.identity
+  )(req.query.engagement);
+
+
+  Account.get$({type: 'facebook', userId: req.params.userId, accountId: req.params.accountId})
+  .pluck('accessToken')
+  .switchMap(fbPostSearchWithFacebookId$)
+  .pluck('data')
+  .map(filterOnSelectedTypes)
+  .map(filterOnLiked)
+  .map(filterOnCommented)
+  .subscribe(
+    fbData => res.status(200).json(fbData),
+    err => res.status(500).json(err)
+  )
+});
+
+
 
 module.exports = router;

@@ -2,7 +2,7 @@ import Rx           from 'rxjs/Rx';
 import { dynamoose, dnynamodb } from '../config/dynamodb';
 
 const schema = new dynamoose.Schema({ 
-  id: {
+  userId: {
     hashKey: true,
     type: Number
   },

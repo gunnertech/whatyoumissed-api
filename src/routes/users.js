@@ -10,7 +10,7 @@ router.post('/', (req, res, next) => {
   const createUser = Rx.Observable.bindNodeCallback(User.create);
 
   createUser({
-    id: Date.now(),
+    userId: Date.now(),
     email: "cody@gunnertech.com",
     mobile: "8609404747"
   })
