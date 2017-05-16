@@ -72,6 +72,15 @@ schema.statics.postFacebookComment$ = function(userId, accountId, postId, messag
   .switchMap(postComment$)
 }
 
+schema.statics.postFacebookLink$ = function(userId, accountId, postId, link) {
+  let Account = dynamoose.model('Account');
+  let postShare$ = (link => (accessToken) => fbPostShare$(link, accessToken))(link);
+
+  return Account.get$({type: 'facebook', userId: userId, accountId: accountId})
+  .pluck('accessToken')
+  .switchMap(postShare$)
+}
+
 schema.statics.autoPostComments$ = function(userId, accountId, facebookId, postTypes, accessToken) {
   let Account = dynamoose.model('Account');
   let postComment$ = (accessToken => (message, postId) => fbPostComment$(postId, message, accessToken))(accessToken);

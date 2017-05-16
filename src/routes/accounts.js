@@ -87,6 +87,16 @@ router.post('/:accountId/facebook/:facebookId/posts/:postId/comments', (req, res
   )
 })
 
+router.post('/:accountId/facebook/:facebookId/posts/:postId/shares', (req, res, next) => {
+  Account.postFacebookLink$(req.params.userId, req.params.accountId, req.params.postId, req.body.link)
+  .subscribe(
+    fbData => res.json(fbData),
+    err    => res.status(500).json(err)
+  )
+})
+
+let postShare$ = (accessToken => (link) => fbPostShare$(link, accessToken))(accessToken);
+
 router.get('/:accountId/facebook/:facebookId/posts', (req, res, next) => {
   Account.filterFacebookPosts$(
     req.params.userId, 
