@@ -16,10 +16,24 @@ let fbOauth$ = (options) => {
   })
 }
 
+let fbPostComment$ = (objectId, message, accessToken) => {
+  return Rx.Observable.bindCallback(FB.api)(`${objectId}/comments`, 'post', {message: message, access_token: accessToken});
+}
+
+let fbPostShare$ = (link, accessToken) => {
+  return Rx.Observable.bindCallback(FB.api)(`me/feed`, 'post', {link: link, access_token: accessToken});
+}
+
 let fbMe$ = (accessToken) => {
   const creds = {access_token: accessToken};
   return Rx.Observable.bindCallback(FB.api)('me', creds)
     .map((fbResp) => { if(fbResp.error){  throw fbResp.error } else { return Object.assign({}, creds, fbResp); }} )
+}
+
+let fbMeFeed$ = (accessToken) => {
+  const options = {access_token: accessToken, fields: ["link", "message", "type", "parent_id"], limit: 100};
+  return Rx.Observable.bindCallback(FB.api)('me/feed', options)
+    .map((fbResp) => { if(fbResp.error){  throw fbResp.error } else { return Object.assign({}, options, fbResp); }} )
 }
 
 let fbPageSearch$ = (query, accessToken) => {
@@ -28,13 +42,17 @@ let fbPageSearch$ = (query, accessToken) => {
 }
 
 let fbPostSearch$ = (facebookId, accessToken) => {
-  const options = {access_token: accessToken, limit: 100, fields: ['actions','url','event','images','comments','message','name','picture','description','type','link','shares','likes.limit(1000){id,name,link}']};
+  const options = {access_token: accessToken, limit: 100, fields: ['id','actions','url','event','images','comments','message','name','picture','description','type','link','shares','likes.limit(1000){id,name,link}']};
   return Rx.Observable.bindCallback(FB.api)(`${facebookId}/feed`, options)
+    .map(fbResponse => Object.assign({}, fbResponse, {accessToken}))
 }
 
 export {
   fbOauth$,
   fbMe$,
   fbPageSearch$,
-  fbPostSearch$
+  fbPostSearch$,
+  fbPostComment$,
+  fbMeFeed$,
+  fbPostShare$
 }

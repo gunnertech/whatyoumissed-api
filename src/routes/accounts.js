@@ -3,9 +3,9 @@ import Rx      from 'rxjs/Rx';
 import R       from 'ramda';
 
 import Account from '../models/account';
-import User from '../models/user';
-import {FB, FacebookApiException} from 'fb';
-import {fbOauth$, fbMe$, fbPageSearch$, fbPostSearch$} from '../utils/facebook';
+import User    from '../models/user';
+import FB      from '../config/facebook';
+import {fbOauth$, fbMe$, fbPageSearch$, fbPostSearch$, fbPostComment$} from '../utils/facebook';
 
 
 let router = express.Router({mergeParams: true});
@@ -18,15 +18,15 @@ router.get('/', (req, res, next) => {
   );
 });
 
-router.get('/facebook_loginurl.:format?', (req, res, next) => {
-  let url = FB.getLoginUrl({ scope: 'user_about_me,user_friends', redirect_uri: `${process.env.BASE_URI}/users/${req.params.userId}/accounts/facebook_connect` });
+router.get('/facebook/loginurl.:format?', (req, res, next) => {
+  let url = FB.getLoginUrl({ scope: 'user_about_me,user_friends,publish_actions,user_posts', redirect_uri: `${process.env.BASE_URI}/users/${req.params.userId}/accounts/facebook/connect` });
   req.params.format == 'html' ?
     res.redirect(url)
     : res.json({url: url});
 });
 
-router.get('/facebook_connect', (req, res, next) => {
-  const redirectUri = `${process.env.BASE_URI}/users/${req.params.userId}/accounts/facebook_connect`;
+router.get('/facebook/connect', (req, res, next) => {
+  const redirectUri = `${process.env.BASE_URI}/users/${req.params.userId}/accounts/facebook/connect`;
   const createAccount$ = R.curry(Account.create$)(req.params.userId);
 
   Rx.Observable.of(req.query)
@@ -59,11 +59,8 @@ router.post('/:accountId/assignment', (req, res, next) => {
   let updateAccount$ = R.curry(Account.update$)({type: 'facebook', userId: req.params.userId, accountId: req.params.accountId});
 
   Rx.Observable.of(req.body.assignment)
-  .do(console.log)
   .flatMap((assignment) => getAccount$.flatMap( account => Rx.Observable.of({account, assignments: R.union(R.propOr([], 'assignments')(account), R.of(assignment)) })) )
-  .do(console.log)
   .switchMap(({account, assignments}) => updateAccount$({assignments}) )
-  .do(console.log)
   .subscribe(
     data => res.json(data),
     err => res.status(500).json(err)
@@ -82,39 +79,46 @@ router.get('/:accountId/facebook/pages', (req, res, next) => {
   )
 });
 
+router.post('/:accountId/facebook/:facebookId/posts/:postId/comments', (req, res, next) => {
+  Account.postFacebookComment$(req.params.userId, req.params.accountId, req.params.postId, req.body.message)
+  .subscribe(
+    fbData => res.json(fbData),
+    err    => res.status(500).json(err)
+  )
+})
+
 router.get('/:accountId/facebook/:facebookId/posts', (req, res, next) => {
-  let fbPostSearchWithFacebookId$ = R.curry(fbPostSearch$)(req.params.facebookId);
-  let filterOnSelectedTypes = R.ifElse(
-    R.either(R.isEmpty, R.isNil),
-    (types) => R.identity,
-    (types) => R.curry(R.filter(R.pipe(R.prop('type'), R.curry(R.flip(R.contains))(types))))
-  )((req.query.types ? req.query.types.split(',') : null));
+  Account.filterFacebookPosts$(
+    req.params.userId, 
+    req.params.accountId, 
+    req.params.facebookId, 
+    req.query.types, 
+    req.query.engagement)
+  .subscribe(
+    fbData => res.status(200).json(fbData),
+    err => {console.log(err); res.status(500).json(err)}
+  )
+});
 
-  let containsAccountId = R.curry(R.contains)(req.params.accountId);
-
-  let filterOnLiked = R.ifElse(
-    R.equals('liked'),
-    () => R.filter(R.pipe(R.path(['likes','data']), R.pluck('id'), containsAccountId, R.not)),
-    () => R.identity
-  )(req.query.engagement);
-
-  let filterOnCommented = R.ifElse(
-    R.equals('commented'),
-    () => R.filter(R.pipe(R.pathOr([],['comments','data']), R.pluck('from'), R.pluck('id'), containsAccountId, R.not)),
-    () => R.identity
-  )(req.query.engagement);
-
+router.post('/:accountId/facebook/:facebookId/posts/comment', (req, res, next) => {
+  let autoPostComments$ = ((facebookId, postTypes) => (userId, accountId, accessToken) => Account.autoPostComments$(userId, accountId, facebookId, postTypes, accessToken))(req.params.facebookId, req.query.types)
 
   Account.get$({type: 'facebook', userId: req.params.userId, accountId: req.params.accountId})
-  .pluck('accessToken')
-  .switchMap(fbPostSearchWithFacebookId$)
-  .pluck('data')
-  .map(filterOnSelectedTypes)
-  .map(filterOnLiked)
-  .map(filterOnCommented)
+  .switchMap((account) => autoPostComments$(account.userId, account.accountId, account.accessToken))
   .subscribe(
     fbData => res.status(200).json(fbData),
     err => res.status(500).json(err)
+  )
+});
+
+router.post('/:accountId/facebook/:facebookId/posts/share', (req, res, next) => {
+  let autoPostShares$ = ((facebookId, postTypes) => (userId, accountId, accessToken) => Account.autoPostShares$(userId, accountId, facebookId, postTypes, accessToken))(req.params.facebookId, req.query.types)
+
+  Account.get$({type: 'facebook', userId: req.params.userId, accountId: req.params.accountId})
+  .switchMap((account) => autoPostShares$(account.userId, account.accountId, account.accessToken))
+  .subscribe(
+    fbData => res.status(200).json(fbData),
+    err => {console.log(err); res.status(500).json(err)}
   )
 });
 

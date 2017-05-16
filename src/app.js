@@ -62,6 +62,7 @@ app.use((req, res, next) => {
 
 if (process.env.NODE_ENV === 'development') {
   app.use((err, req, res, next) => {
+    console.log(err);
     res.status(err.status || 500);
     res.render('error', {
       message: err.message,
