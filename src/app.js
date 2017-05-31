@@ -5,6 +5,8 @@ import cookieSession from 'cookie-session';
 import cookieParser  from 'cookie-parser';
 import bodyParser    from 'body-parser';
 import favicon       from 'serve-favicon';
+import jwt           from 'express-jwt';
+import unless        from 'express-unless';
 
 
 import users         from './routes/users';
@@ -47,6 +49,14 @@ app.use(cookieSession({ secret: 'secret'}));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, '/../public')));
 
+const jwtCheck = jwt({
+  secret: process.env.SECRET || 'somethingsupersecretandsafe'
+});
+
+jwtCheck.unless = unless;
+
+app.use(jwtCheck.unless({path: '/users/login' }));
+app.use(utils.middleware().unless({path: '/users/login' }));
 app.use('/facebook', facebook);
 app.use('/users',    users);
 app.use('/users/:userId/accounts', accounts);
@@ -62,12 +72,7 @@ app.use((req, res, next) => {
 
 if (process.env.NODE_ENV === 'development') {
   app.use((err, req, res, next) => {
-    console.log(err);
-    res.status(err.status || 500);
-    res.render('error', {
-      message: err.message,
-      error: err
-    });
+    res.status(err.status || 500).json({error: err, message: err.message})
   });
 }
 

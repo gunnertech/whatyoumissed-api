@@ -95,8 +95,6 @@ router.post('/:accountId/facebook/:facebookId/posts/:postId/shares', (req, res, 
   )
 })
 
-let postShare$ = (accessToken => (link) => fbPostShare$(link, accessToken))(accessToken);
-
 router.get('/:accountId/facebook/:facebookId/posts', (req, res, next) => {
   Account.filterFacebookPosts$(
     req.params.userId, 

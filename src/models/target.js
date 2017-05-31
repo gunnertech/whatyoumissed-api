@@ -2,29 +2,22 @@ import Rx           from 'rxjs/Rx';
 import { dynamoose, dnynamodb } from '../config/dynamodb';
 
 const schema = new dynamoose.Schema({ 
-  userId: {
+  accountId: {
     hashKey: true,
     type: Number
   },
-  email: {
+  type: {
     type: String,
     trim: true,
-    required: true
+    lowercase: true,
+    required: true,
+    default: 'facebook',
+    rangeKey: true,
+    index: true
   },
-  mobile: {
+  name: {
     type: String,
-    trim: true,
     required: true
-  },
-  roles: {
-    type: [String],
-    lowercase: true,
-    default: ['default']
-  },
-  subscriptions: {
-    type: [String],
-    lowercase: true,
-    default: []
   }
 },
 {
@@ -32,6 +25,6 @@ const schema = new dynamoose.Schema({
   throughput: {read: 15, write: 5}
 });
 
-const model = dynamoose.model('User', schema);
+const model = dynamoose.model('Target', schema);
 
 module.exports = model;
