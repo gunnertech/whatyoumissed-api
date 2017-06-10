@@ -9,10 +9,15 @@ const schema = new dynamoose.Schema({
     hashKey: true,
     type: Number
   },
-  accountId: {
-    type: Number,
+  accountKey: {
+    type: String,
     required: true,
     rangeKey: true,
+    index: true
+  },
+  accountId: {
+    type: String,
+    required: true,
     index: true
   },
   type: {
@@ -21,7 +26,6 @@ const schema = new dynamoose.Schema({
     lowercase: true,
     required: true,
     default: 'facebook',
-    rangeKey: true,
     index: true
   },
   name: {
@@ -39,7 +43,7 @@ const schema = new dynamoose.Schema({
     required: true
   },
   assignments: {
-    type: [Object],
+    type: [Object], //{name: 'String', id: 'String'}
     default: []
   }
 },
@@ -48,26 +52,27 @@ const schema = new dynamoose.Schema({
   throughput: {read: 15, write: 5}
 });
 
-schema.statics.create$ = function(userId, options) {
+schema.statics.create$ = function(options) {
   let Account = dynamoose.model('Account');
-  return Rx.Observable.bindNodeCallback(Account.create.bind(Account))(Object.assign({}, options, {userId: userId}));
+  return Rx.Observable.bindNodeCallback(Account.create.bind(Account))(options);
 }
 
-schema.statics.get$ = function({type, userId, accountId}) {
+schema.statics.get$ = function({userId, accountKey}) {
   let Account = dynamoose.model('Account');
-  return Rx.Observable.bindNodeCallback(Account.get.bind(Account))({type, userId, accountId});
+  return Rx.Observable.bindNodeCallback(Account.get.bind(Account))({userId, accountKey});
 }
 
 schema.statics.update$ = function(query, operation) {
   let Account = dynamoose.model('Account');
-  return Rx.Observable.bindNodeCallback(Account.update.bind(Account))(query, operation);
+  console.log(operation)
+  return Rx.Observable.bindNodeCallback(Account.update.bind(Account))(query, {$ADD: operation});
 }
 
 schema.statics.postFacebookComment$ = function(userId, accountId, postId, message) {
   let Account = dynamoose.model('Account');
   let postComment$ = R.curry(fbPostComment$)(postId)(message);
 
-  return Account.get$({type: 'facebook', userId: userId, accountId: accountId})
+  return Account.get$({userId, accountKey: `${accountId}-facebook`})
   .pluck('accessToken')
   .switchMap(postComment$)
 }
@@ -76,7 +81,7 @@ schema.statics.postFacebookLink$ = function(userId, accountId, postId, link) {
   let Account = dynamoose.model('Account');
   let postShare$ = (link => (accessToken) => fbPostShare$(link, accessToken))(link);
 
-  return Account.get$({type: 'facebook', userId: userId, accountId: accountId})
+  return Account.get$({userId, accountKey: `${accountId}-facebook`})
   .pluck('accessToken')
   .switchMap(postShare$)
 }
@@ -113,7 +118,6 @@ schema.statics.autoPostShares$ = function(userId, accountId, facebookId, postTyp
 }
 
 schema.statics.filterFacebookPosts$ = function(userId, accountId, facebookId, postTypes, engagementType) {
-  console.log(accountId)
   let Account = dynamoose.model('Account');
   let fbPostSearchWithFacebookId$ = R.curry(fbPostSearch$)(facebookId);
   let filterOnSelectedTypes = R.ifElse(
@@ -126,7 +130,7 @@ schema.statics.filterFacebookPosts$ = function(userId, accountId, facebookId, po
   
   let filterOnLiked = R.ifElse(
     R.equals('liked'),
-    () => R.filter(R.pipe(R.path(['likes','data']), R.pluck('id'), containsAccountId, R.not)),
+    () => R.filter(R.pipe(R.pathOr([],['likes','data']), R.tap(console.log), R.pluck('id'), containsAccountId, R.not)),
     () => R.identity
   )(engagementType);
   
@@ -147,7 +151,7 @@ schema.statics.filterFacebookPosts$ = function(userId, accountId, facebookId, po
   })(engagementType)
     
 
-  return Account.get$({type: 'facebook', userId: userId, accountId: accountId})
+  return Account.get$({userId, accountKey: `${accountId}-facebook`})
   .pluck('accessToken')
   .switchMap((accessToken) => {
     return filterOnShared(
@@ -176,4 +180,4 @@ schema.statics.filterFacebookPosts$ = function(userId, accountId, facebookId, po
 let model = dynamoose.model('Account', schema);
 
 
-module.exports = model;
+export default model;

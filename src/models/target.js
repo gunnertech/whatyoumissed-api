@@ -27,4 +27,4 @@ const schema = new dynamoose.Schema({
 
 const model = dynamoose.model('Target', schema);
 
-module.exports = model;
+export default model;

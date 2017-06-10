@@ -8,38 +8,46 @@ import favicon       from 'serve-favicon';
 import jwt           from 'express-jwt';
 import unless        from 'express-unless';
 
+import mailer from './config/mailer';
 
+////ROUTES
+import auth          from './routes/auth';
 import users         from './routes/users';
 import facebook      from './routes/facebook';
 import accounts      from './routes/accounts';
 
+////Middleware
+import {setCurrentUser, adminCheck}         from './utils/middleware';
 
-let app = express();
+
+const app = express();
+
+const jwtCheck = jwt({
+  secret: process.env.SECRET_TOKEN,
+  requestProperty: 'auth',
+  getToken: (req) => {
+    if (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Bearer') {
+      return req.headers.authorization.split(' ')[1];
+    } else if (req.query && req.query.jwttoken) {
+      return req.query.jwttoken;
+    }
+    return null;
+  }
+});
+jwtCheck.unless = unless;
+
+const pathsThatDontRequireAuth = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/password/request-reset',
+  '/auth/password/reset',
+  '/accounts/facebook/auth'
+];
+
+const adminPaths = [
+];
 
 
-
-// import { dynamoose, dynamodb } from './config/dynamodb';
-
-// dynamodb.deleteTable({ TableName: "User" }, console.log);
-// dynamodb.listTables(console.log);
-
-// import Dog          from './models/dog';
-
-// Dog.create({
-//   ownerId: 4,
-//   name: 'Odie',
-//   breed: 'Beagle',
-//   color: ['Tan'],
-//   cartoon: true
-// }, function(err, odie) {
-//   if(err) { return console.log(err); }
-//   console.log('Odie is a ' + odie.breed);
-// });
-
-// Dog.get({ownerId: 4, name: 'Odie'}, function(err, odie) {
-//   if(err) { return console.log(err); }
-//   console.log('Odie is a ' + odie.breed);
-// });
 
 
 app.use(logger('dev'));
@@ -48,22 +56,34 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieSession({ secret: 'secret'}));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, '/../public')));
-
-const jwtCheck = jwt({
-  secret: process.env.SECRET || 'somethingsupersecretandsafe'
-});
-
-jwtCheck.unless = unless;
-
-app.use(jwtCheck.unless({path: '/users/login' }));
-app.use(utils.middleware().unless({path: '/users/login' }));
-app.use('/facebook', facebook);
-app.use('/users',    users);
-app.use('/users/:userId/accounts', accounts);
-
-
 app.use(favicon(__dirname + '/../public/images/favicon.ico'));
-// using arrow syntax
+
+
+
+////Middleware
+app.use((req, res, next) => {
+
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, EncryptionKey");
+
+  if ('OPTIONS' === req.method) {
+    res.sendStatus(200);
+  }
+  else {
+    next();
+  }
+});
+app.use(jwtCheck.unless({path: pathsThatDontRequireAuth}));
+app.use(setCurrentUser.unless({path: pathsThatDontRequireAuth}));
+app.use(adminCheck.if({path: adminPaths}));
+
+////ROUTES
+app.use('/auth',                   auth);
+app.use('/facebook',               facebook);
+app.use('/users',                  users);
+app.use('/accounts', accounts);
+
 app.use((req, res, next) => {
   let err = new Error('Not Found');
   err.status = 404;
@@ -72,14 +92,9 @@ app.use((req, res, next) => {
 
 if (process.env.NODE_ENV === 'development') {
   app.use((err, req, res, next) => {
-    res.status(err.status || 500).json({error: err, message: err.message})
+    console.log(err)
+    res.status(err.status || err.type || 500).json({error: err, message: err.message})
   });
 }
-
-app.use((err, req, res, next) => {
-  res.status(err.status || 500);
-  res.json(err);
-});
-
 
 module.exports = app;

@@ -1,7 +1,7 @@
 import Rx           from 'rxjs/Rx';
 import { dynamoose, dnynamodb } from '../config/dynamodb';
 
-const schema = new dynamoose.Schema({ 
+let schema = new dynamoose.Schema({ 
   userId: {
     hashKey: true,
     type: Number
@@ -9,12 +9,21 @@ const schema = new dynamoose.Schema({
   email: {
     type: String,
     trim: true,
-    required: true
+    required: true,
+    lowercase: true,
+    index: {
+      global: true,
+      project: true, // ProjectionType: ALL
+      throughput: 5 // read and write are both 5
+    }
   },
   mobile: {
     type: String,
-    trim: true,
-    required: true
+    trim: true
+  },
+  password: {
+    type: String,
+    trim: true
   },
   roles: {
     type: [String],
@@ -25,13 +34,22 @@ const schema = new dynamoose.Schema({
     type: [String],
     lowercase: true,
     default: []
+  },
+  passwordResetToken: {
+    type: String,
+    trim: true
+  },
+  passwordResetTokenExpiresAt: {
+    type: Date
   }
 },
 {
   timestamps: true,
   throughput: {read: 15, write: 5}
-});
+}); 
+
+schema.methods.toJSON = function(){ return {...this, password: undefined} }
 
 const model = dynamoose.model('User', schema);
 
-module.exports = model;
+export default model;

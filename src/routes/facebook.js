@@ -7,7 +7,7 @@ let router = express.Router();
 FB.options({
   appId:          process.env.FACEBOOK_APP_ID,
   appSecret:      process.env.FACEBOOK_APP_SECRET,
-  redirectUri:    "http://localhost:4000/facebook/callback"
+  redirectUri:    "http://localhost:4000/accounts/facebook/callback"
 });
 
 router.get('/me', (req, res, next) => {
@@ -46,7 +46,7 @@ router.get('/posts', (req, res, next) => {
 });
 
 router.get('/loginurl.:format?', (req, res, next) => {
-  let url = FB.getLoginUrl({ scope: 'user_about_me,user_friends', redirect_uri: `${process.env.BASE_URI}/users/${1493092790069}/accounts/facebook_connect` });
+  let url = FB.getLoginUrl({ scope: 'user_about_me,user_friends', redirect_uri: `${process.env.BASE_URI}/accounts/facebook_connect` });
   req.params.format == 'html' ?
     res.redirect(url)
     : res.json({url: url});
@@ -102,4 +102,4 @@ router.get('/callback', (req, res, next) => {
   })
 });
 
-module.exports = router;
+export default router;
