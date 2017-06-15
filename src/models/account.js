@@ -64,7 +64,6 @@ schema.statics.get$ = function({userId, accountKey}) {
 
 schema.statics.update$ = function(query, operation) {
   let Account = dynamoose.model('Account');
-  console.log(operation)
   return Rx.Observable.bindNodeCallback(Account.update.bind(Account))(query, {$ADD: operation});
 }
 

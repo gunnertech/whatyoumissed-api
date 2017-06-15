@@ -41,7 +41,6 @@ router.get('/facebook/auth', (req, res, next) => {
     // .switchMap(Account.create$)
     .subscribe(
       ({accessToken, accountId, name, accountKey, type}) => {
-        console.log(req.params.format)
         req.params.format === 'json' ?
           res.json({accessToken, accountId, name, accountKey, type})
           : res.redirect(`http://localhost:3000/accounts?accessToken=${accessToken}&accountId=${accountId}&name=${name}&accountKey=${accountKey}&type=${type}`);
@@ -71,7 +70,10 @@ router.post('/:accountId/facebook/assignments', (req, res, next) => {
   let getAccount$ = Account.get$({userId: req.currentUser.userId, accountKey: `${req.params.accountId}-facebook`});
   let updateAccount$ = R.curry(Account.update$)({userId: req.currentUser.userId, accountKey: `${req.params.accountId}-facebook`});
 
+  console.log(req.body)
+
   Rx.Observable.of(req.body.assignment)
+  .map(assignment => JSON.parse(assignment))
   .flatMap((assignment) => getAccount$.flatMap( account => Rx.Observable.of({account, assignments: R.union(R.propOr([], 'assignments')(account), R.of(assignment)) })) )
   .switchMap(({account, assignments}) => updateAccount$({assignments}) )
   .subscribe(
