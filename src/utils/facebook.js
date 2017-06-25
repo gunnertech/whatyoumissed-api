@@ -42,7 +42,7 @@ let fbPageSearch$ = (query, accessToken) => {
 }
 
 let fbPostSearch$ = (facebookId, accessToken) => {
-  const options = {access_token: accessToken, limit: 100, fields: ['id','actions','url','event','images','comments','message','name','picture','description','type','link','shares','likes.limit(1000){id,name,link}']};
+  const options = {access_token: accessToken, limit: 35, fields: ['id','actions','url','event','images','comments','message','name','picture','description','type','link','shares','likes.limit(100){id,name,link}']};
   return Rx.Observable.bindCallback(FB.api)(`${facebookId}/feed`, options)
     .map(fbResponse => Object.assign({}, fbResponse, {accessToken}))
 }
